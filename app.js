@@ -722,20 +722,27 @@ class VoiceCarAssistant {
     async analyzeText(text) {
         if (!text || text.length < 5) return;
         
+        console.log('[VoiceAssistant] 开始分析文本:', text);
+        
+        // 同时运行本地规则分析（作为备用和对比）
+        const localResult = this.localAnalyze(text);
+        console.log('[VoiceAssistant] 本地规则分析结果:', localResult);
+        
         // 优先使用千问API
         if (this.qwenAPI) {
             try {
+                console.log('[VoiceAssistant] 使用千问API分析...');
                 const result = await this.qwenAPI.analyzeCarInfo(text);
+                console.log('[VoiceAssistant] 千问API分析结果:', result);
                 this.updateResults(result);
             } catch (error) {
-                console.warn('千问API分析失败，使用本地规则:', error);
+                console.warn('[VoiceAssistant] 千问API分析失败，使用本地规则:', error);
                 // 降级到本地规则
-                const localResult = this.localAnalyze(text);
                 this.updateResults(localResult);
             }
         } else {
+            console.log('[VoiceAssistant] 未配置API，使用本地规则');
             // 使用本地规则分析
-            const localResult = this.localAnalyze(text);
             this.updateResults(localResult);
         }
     }
@@ -744,16 +751,26 @@ class VoiceCarAssistant {
     localAnalyze(text) {
         const patterns = {
             carPrice: [
+                // 匹配 "15万5"、"20万8千" 这样的口语表达
+                /(?:车价|车辆价格|车款|总价|价格|预算|价位|想买个|想买).*?(\d+)万(\d+)(?:千|k|K)?/,
+                /(\d+)万(\d+)(?:千|k|K)?.*?(?:的车|左右|预算|价位|左右的车|差不多)/,
+                // 标准格式
                 /(?:车价|车辆价格|车款|总价|价格|预算|价位|想买个|想买).*?(\d+(?:\.\d+)?)\s*(万|万元|w|W)/,
                 /(\d+(?:\.\d+)?)\s*(万|万元|w|W).*?(?:的车|左右|预算|价位|左右的车)/,
             ],
             downPayment: [
+                // 匹配 "2万5"、"3万8" 这样的口语表达
+                /(?:首付|首付款|首付比例).*?(\d+)万(\d+)(?:千|k|K)?/,
+                // 标准格式
                 /(?:首付|首付款|首付比例).*?(\d+(?:\.\d+)?)\s*(万|万元|w|%|成|k|K)/,
                 /(?:首付|首付款).*?(\d+(?:\.\d+)?)[\s%]*(?:百分之)?/,
                 /(?:首付|首付款).*?(\d+)\s*成/,
                 /(?:首付|首付款).*?(\d+)\s*[万千]/
             ],
             monthlyPayment: [
+                // 匹配 "3千5"、"5千2" 这样的口语表达
+                /(?:月供|每月|每个月|月还|还款).*?(\d+)千(\d+)(?:百|元|块)?/,
+                // 标准格式
                 /(?:月供|每月|每个月|月还|还款).*?(\d+(?:\.\d+)?)\s*(千|k|K|元|块)/,
                 /(?:月供|每月还款|月还款).*?(?:不超过|大概|大约|在|是|控制).*?(\d{3,5})/,
                 /(\d{3,5}).*?(?:的月供|一个月|每月|月供|还款)/,
@@ -773,8 +790,31 @@ class VoiceCarAssistant {
             for (const regex of regexList) {
                 const match = text.match(regex);
                 if (match) {
-                    let value = match[1];
-                    let unit = match[2] || '';
+                    let value, unit, extra;
+                    
+                    // 检查是否是 "X万Y" 格式（两个捕获组）
+                    if (match[2] && !isNaN(match[2]) && 
+                        (key === 'carPrice' || key === 'downPayment') && 
+                        text.includes(match[1] + '万' + match[2])) {
+                        // 处理 "2万5" 这种格式
+                        const wan = parseFloat(match[1]);
+                        const qian = parseFloat(match[2]);
+                        // "2万5" = 2.5万，"2万5千" = 2.5万
+                        value = wan + qian / 10;
+                        unit = '万';
+                    } else if (match[2] && !isNaN(match[2]) && 
+                               key === 'monthlyPayment' && 
+                               text.includes(match[1] + '千' + match[2])) {
+                        // 处理 "3千5" 这种格式
+                        const qian = parseFloat(match[1]);
+                        const bai = parseFloat(match[2]);
+                        value = qian * 1000 + bai * 100;
+                        unit = '元';
+                    } else {
+                        value = match[1];
+                        unit = match[2] || '';
+                    }
+                    
                     results[key] = this.formatValue(key, value, unit);
                     break;
                 }
@@ -787,6 +827,9 @@ class VoiceCarAssistant {
     // 格式化提取的值
     formatValue(key, value, unit) {
         const num = parseFloat(value);
+        
+        // 处理 NaN 情况
+        if (isNaN(num)) return null;
         
         switch (key) {
             case 'carPrice':
@@ -809,6 +852,9 @@ class VoiceCarAssistant {
             case 'monthlyPayment':
                 if (unit === '千' || unit === 'k' || unit === 'K') {
                     return `${num}千元`;
+                }
+                if (unit === '元' || unit === '块' || !unit) {
+                    return `${Math.round(num)}元`;
                 }
                 return num < 10000 ? `${num}元` : `${(num / 10000).toFixed(1)}万元`;
                 

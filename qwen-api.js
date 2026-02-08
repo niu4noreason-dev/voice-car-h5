@@ -19,21 +19,55 @@ class QwenAPI {
             throw new Error('请先配置千问API Key');
         }
         
-        const prompt = `请从以下用户购车相关的对话内容中，提取关键信息并以JSON格式返回。
-如果没有找到某项信息，该字段返回null。
+        const prompt = `任务：从用户购车对话中提取关键信息，以JSON格式返回。
 
-需要提取的字段：
-- carPrice: 车辆价格（例如："15万元"、"20万"）
-- downPayment: 首付款金额或比例（例如："5万元"、"30%"）
-- monthlyPayment: 月供金额（例如："3000元"、"5000"）
-- loanTerm: 贷款期限（例如："3年"、"36期"）
+提取规则：
+1. carPrice（车辆价格）：提取用户提到的车辆预算或价格
+   - 必须包含单位"万"或"元"
+   - 口语表达转换："15万左右"→"15万元"，"20万出头"→"20万元"
+   - "2万5" 或 "2万五" 应该解析为 "2.5万元"
+   
+2. downPayment（首付款）：提取首付金额或比例
+   - 如果是金额：必须包含"万"或"元"单位
+   - 口语转换："2万5"→"2.5万元"，"3万"→"3万元"，"百分之三十"→"30%"
+   - "2万5"表示25000元 = 2.5万元，绝对不能只输出"25"
+   - "2万五"也表示2.5万元
+   
+3. monthlyPayment（月供金额）：提取每月还款能力
+   - 必须包含"元"单位
+   - 口语转换："三千"→"3000元"，"5千左右"→"5000元"
+   - "三千五"→"3500元"
+   
+4. loanTerm（贷款期限）：提取分期时长
+   - 统一转换为"X年"或"X个月"
+   - 口语转换："三年"→"3年"，"36期"→"3年"
+
+严格规则：
+- "2万5" 必须输出 "2.5万元"，只输出"25"是错误的
+- "3万8" 必须输出 "3.8万元"
+- 数值和单位必须完整，不能只返回数字
+- 如果没有找到某项信息，该字段返回null
 
 用户内容："${text}"
 
-请只返回JSON格式，不要包含其他说明文字。格式示例：
-{"carPrice": "15万元", "downPayment": "30%", "monthlyPayment": "3000元", "loanTerm": "3年"}`;
+输出格式（严格JSON，不要markdown代码块）：
+{"carPrice": "提取的价格或null", "downPayment": "提取的首付或null", "monthlyPayment": "提取的月供或null", "loanTerm": "提取的期限或null"}
+
+示例1：
+输入："我想买15万的车，首付2万5，月供3000左右"
+输出：{"carPrice": "15万元", "downPayment": "2.5万元", "monthlyPayment": "3000元", "loanTerm": null}
+
+示例2：
+输入："预算20万，首付30%，分三年还"
+输出：{"carPrice": "20万元", "downPayment": "30%", "monthlyPayment": null, "loanTerm": "3年"}
+
+示例3：
+输入："首付2万五左右"
+输出：{"carPrice": null, "downPayment": "2.5万元", "monthlyPayment": null, "loanTerm": null}`;
 
         try {
+            console.log('[QwenAPI] 发送请求，文本:', text);
+            
             const response = await fetch(this.baseURL, {
                 method: 'POST',
                 headers: {
@@ -46,7 +80,7 @@ class QwenAPI {
                         messages: [
                             {
                                 role: 'system',
-                                content: '你是一个专业的购车需求分析助手，擅长从用户对话中提取车辆价格、首付、月供、贷款期限等关键信息。'
+                                content: '你是一个专业的购车需求分析助手，擅长从用户对话中提取车辆价格、首付、月供、贷款期限等关键信息。特别注意："2万5"应该解析为2.5万元，不是25。'
                             },
                             {
                                 role: 'user',
@@ -70,11 +104,16 @@ class QwenAPI {
             const data = await response.json();
             const content = data.output?.choices?.[0]?.message?.content || '';
             
+            console.log('[QwenAPI] 原始响应:', content);
+            
             // 解析JSON响应
-            return this.parseResponse(content);
+            const result = this.parseResponse(content);
+            console.log('[QwenAPI] 解析结果:', result);
+            
+            return result;
             
         } catch (error) {
-            console.error('千问API调用失败:', error);
+            console.error('[QwenAPI] 调用失败:', error);
             throw error;
         }
     }
