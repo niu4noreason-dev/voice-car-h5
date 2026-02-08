@@ -218,7 +218,17 @@ class VoiceCarAssistant {
     
     // 更新转录显示
     updateTranscriptDisplay() {
-        if (!this.transcriptContent) return;
+        console.log('[VoiceAssistant] updateTranscriptDisplay called', {
+            transcriptContent: !!this.transcriptContent,
+            finalTranscript: this.finalTranscript,
+            interimTranscript: this.interimTranscript,
+            isRecording: this.isRecording
+        });
+        
+        if (!this.transcriptContent) {
+            console.warn('[VoiceAssistant] transcriptContent is null!');
+            return;
+        }
         
         let html = '';
         
@@ -238,7 +248,9 @@ class VoiceCarAssistant {
             html += '<span class="transcript-cursor"></span>';
         }
         
-        this.transcriptContent.innerHTML = html || '<span class="transcript-placeholder">正在聆听，请开始说话...</span>';
+        const finalHtml = html || '<span class="transcript-placeholder">正在聆听，请开始说话...</span>';
+        this.transcriptContent.innerHTML = finalHtml;
+        console.log('[VoiceAssistant] transcriptContent updated:', finalHtml.substring(0, 100));
         
         // 自动滚动到底部
         this.transcriptContent.scrollTop = this.transcriptContent.scrollHeight;

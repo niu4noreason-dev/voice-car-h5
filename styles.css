@@ -316,11 +316,17 @@ html, body {
     padding: 0 20px 10px;
     opacity: 1;
     transform: translateY(0);
+    min-height: 80px;
 }
 
-.transcript-section.show {
-    opacity: 1;
-    transform: translateY(0);
+/* 测试模式 - 强制显示 */
+.transcript-section.test-mode {
+    flex: 0 0 12% !important;
+    padding: 10px 20px !important;
+    opacity: 1 !important;
+    transform: none !important;
+    min-height: 80px !important;
+    border: 2px dashed var(--primary-color);
 }
 
 .transcript-container {
@@ -377,13 +383,16 @@ html, body {
 .transcript-content {
     font-size: 14px;
     line-height: 1.6;
-    color: var(--text-primary);
+    color: #ffffff;
     min-height: 22px;
     max-height: 60px;
     overflow-y: auto;
     word-wrap: break-word;
     position: relative;
     z-index: 1;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    border-radius: 8px;
 }
 
 .transcript-content::-webkit-scrollbar {
@@ -410,7 +419,8 @@ html, body {
 }
 
 .transcript-final {
-    color: var(--text-primary);
+    color: #ffffff;
+    font-weight: 500;
 }
 
 .transcript-cursor {
