@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>智能语音购车助手</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- HTTPS 提示 -->
+    <div class="https-banner" id="httpsBanner">
+        <span class="https-icon">🔒</span>
+        <span>iOS 需要使用 HTTPS 才能使用录音功能</span>
+        <button class="https-close" onclick="this.parentElement.style.display='none'">×</button>
+    </div>
+
+    <div class="container">
+        <!-- 背景动效 -->
+        <div class="bg-animation">
+            <div class="gradient-orb orb-1"></div>
+            <div class="gradient-orb orb-2"></div>
+            <div class="grid-overlay"></div>
+        </div>
+
+        <!-- 顶部音波区域 (60%屏幕) -->
+        <div class="wave-section">
+            <div class="status-indicator" id="statusText">准备就绪</div>
+            
+            <!-- 音量显示 -->
+            <div class="volume-display" id="volumeDisplay">
+                <div class="volume-label">MIC</div>
+                <div class="volume-bar-container">
+                    <div class="volume-bar" id="volumeBar"></div>
+                    <div class="volume-grid">
+                        <span></span><span></span><span></span><span></span><span></span>
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+                <div class="volume-value" id="volumeValue">0%</div>
+            </div>
+            
+            <canvas id="waveCanvas"></canvas>
+            <div class="wave-overlay">
+                <div class="pulse-ring" id="pulseRing"></div>
+            </div>
+        </div>
+
+        <!-- 实时转录区域 -->
+        <div class="transcript-section" id="transcriptSection">
+            <div class="transcript-container">
+                <div class="transcript-label">
+                    <span class="recording-dot"></span>
+                    实时转录
+                </div>
+                <div class="transcript-content" id="transcriptContent">
+                    <span class="transcript-placeholder">点击开始按钮后，语音内容将实时显示在这里...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 信息展示区域 -->
+        <div class="info-section" id="infoSection">
+            <div class="info-card">
+                <div class="card-header">
+                    <span class="card-title">🚗 智能分析中</span>
+                    <div class="typing-indicator" id="typingIndicator">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item" id="priceItem">
+                        <div class="info-label">车辆价格</div>
+                        <div class="info-value" id="carPrice">--</div>
+                    </div>
+                    <div class="info-item" id="downPaymentItem">
+                        <div class="info-label">首付款</div>
+                        <div class="info-value" id="downPayment">--</div>
+                    </div>
+                    <div class="info-item" id="monthlyItem">
+                        <div class="info-label">月供金额</div>
+                        <div class="info-value" id="monthlyPayment">--</div>
+                    </div>
+                    <div class="info-item" id="termItem">
+                        <div class="info-label">贷款期限</div>
+                        <div class="info-value" id="loanTerm">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制按钮区域 -->
+        <div class="control-section">
+            <button class="control-btn" id="controlBtn">
+                <div class="btn-glow"></div>
+                <div class="btn-inner">
+                    <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                    </svg>
+                </div>
+            </button>
+            <div class="btn-label" id="btnLabel">点击开始语音输入</div>
+        </div>
+    </div>
+
+    <!-- 提示弹窗 -->
+    <div class="toast" id="toast"></div>
+
+    <script src="qwen-api.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
